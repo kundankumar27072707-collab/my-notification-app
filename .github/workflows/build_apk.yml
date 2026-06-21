@@ -1,19 +1,19 @@
-name: Flutter Build APK
+name: Flutter Build APK From Link
 
-# यह तब चलेगा जब तुम कोड में कोई भी बदलाव करके गिटहब पर सेव करोगे
+# यह तब चलेगा जब तुम Actions टैब में जाकर मैन्युअली "Run workflow" बटन दबाओगे
 on:
-  push:
-    branches: [ "main", "master" ]
-  pull_request:
-    branches: [ "main", "master" ]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    # 1. गिटहब के सर्वर पर कोड लेकर आओ
-    - uses: actions/checkout@v3
+    # 1. सीधे गिटहब लिंक से प्रोजेक्ट को रोबोट के सर्वर पर क्लोन करो
+    - name: Clone Repository from GitHub Link
+      run: |
+        git clone https://github.com/jiusanzhou/flutter_notification_listener.git project
+        cd project
 
     # 2. गिटहब के सर्वर पर जावा (Java) इंस्टॉल करो
     - name: Set up JDK 17
@@ -28,17 +28,17 @@ jobs:
       with:
         channel: 'stable'
 
-    # 4. सारे पैकेजेस और डिपेंडेंसी डाउनलोड करो
-    - name: Install dependencies
-      run: flutter pub get
-
-    # 5. जादुई कमांड - फ्लूटर का असली APK बनाओ
+    # 4. पैकेजेस डाउनलोड करो और example फोल्डर के अंदर APK बिल्ड करो
     - name: Build APK
-      run: flutter build apk --release
+      run: |
+        cd project/example
+        flutter pub get
+        flutter build apk --release
 
-    # 6. बनी-बनाई APK फाइल को डाउनलोड के लिए गिटहब पर अपलोड करो
+    # 5. बनी-बनाई APK फाइल को गिटहब पर अपलोड करो
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v3
       with:
-        name: release-apk
-        path: build/app/outputs/flutter-apk/app-release.apk
+        name: jiusanzhou-notification-apk
+        path: project/example/build/app/outputs/flutter-apk/app-release.apk
+
