@@ -1,0 +1,44 @@
+name: Flutter Build APK
+
+# यह तब चलेगा जब तुम कोड में कोई भी बदलाव करके गिटहब पर सेव करोगे
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. गिटहब के सर्वर पर कोड लेकर आओ
+    - uses: actions/checkout@v3
+
+    # 2. गिटहब के सर्वर पर जावा (Java) इंस्टॉल करो
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    # 3. गिटहब के सर्वर पर फ्लूटर (Flutter) इंस्टॉल करो
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        channel: 'stable'
+
+    # 4. सारे पैकेजेस और डिपेंडेंसी डाउनलोड करो
+    - name: Install dependencies
+      run: flutter pub get
+
+    # 5. जादुई कमांड - फ्लूटर का असली APK बनाओ
+    - name: Build APK
+      run: flutter build apk --release
+
+    # 6. बनी-बनाई APK फाइल को डाउनलोड के लिए गिटहब पर अपलोड करो
+    - name: Upload APK Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: release-apk
+        path: build/app/outputs/flutter-apk/app-release.apk
