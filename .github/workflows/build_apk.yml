@@ -13,14 +13,14 @@ jobs:
       run: |
         git clone https://github.com/jiusanzhou/flutter_notification_listener.git project
 
-    # 2. गिटहब सर्वर पर जावा इंस्टॉल करो
+    # 2. जावा (JDK 17) इंस्टॉल करो
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
 
-    # 3. गिटहब सर्वर पर फ्लूटर इंस्टॉल करो
+    # 3. फ्लूटर इंस्टॉल करो
     - name: Set up Flutter
       uses: subosito/flutter-action@v2
       with:
@@ -32,45 +32,29 @@ jobs:
         cd project/example
         flutter pub get
 
-    # 5. जादुई स्टेप: गिटहब के सर्वर पर ही एक नई डिजिटल चाबी (Keystore) बनाओ 🔑
-    - name: Generate Release Keystore
-      run: |
-        keytool -genkey -v -keystore project/example/android/app/release.keystore -alias my-key-alias -keyalg RSA -keysize 2048 -validity 10000 -storepass "my_secret_password_123" -keypass "my_secret_password_123" -dname "CN=Kundan, OU=Dev, O=KundanApps, L=Patna, S=Bihar, C=IN"
-
-    # 6. ऐप के build.gradle में इस डिजिटल चाबी को ऑटोमैटिक इंजेक्ट करो 🛠️
-    - name: Configure Signing in Gradle
-      run: |
-        cat <<EOT >> project/example/android/app/build.gradle
-        
-        android {
-            signingConfigs {
-                release {
-                    storeFile file("release.keystore")
-                    storePassword "my_secret_password_123"
-                    keyAlias "my-key-alias"
-                    keyPassword "my_secret_password_123"
-                }
-            }
-            buildTypes {
-                release {
-                    signingConfig signingConfigs.release
-                    minifyEnabled true
-                    shrinkResources true
-                }
-            }
-        }
-        EOT
-
-    # 7. अब ऐप को ओब्फ्यूज भी करो और साइन भी करो 🎉
-    - name: Build Signed and Obfuscated APK
+    # 5. पहले बिना किसी एरर के सुरक्षित ओब्फ्यूज्ड APK बना लो 🔐
+    - name: Build Obfuscated APK
       run: |
         cd project/example
         mkdir -p build/app/outputs/symbols
         flutter build apk --release --obfuscate --split-debug-info=build/app/outputs/symbols
 
-    # 8. फाइनल "हैक-प्रूफ + सर्टिफाइड" APK को गिटहब पर अपलोड करो
+    # 6. अब गिटहब के ऑफिशियल टूल से इस APK पर डिजिटल चाबी का ठप्पा लगाओ 🔑
+    - name: Sign APK with Keystore
+      uses: r0adkll/sign-android-release@v1
+      id: sign_app
+      with:
+        releaseDirectory: project/example/build/app/outputs/flutter-apk
+        signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+        alias: my-key-alias
+        keyStorePassword: my_secret_password_123
+        keyPassword: my_secret_password_123
+      env:
+        BUILD_TOOLS_VERSION: "34.0.0"
+
+    # 7. फाइनल साइन की हुई सुरक्षित APK को अपलोड करो
     - name: Upload Signed APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: SIGNED-SECURE-notification-apk
-        path: project/example/build/app/outputs/flutter-apk/app-release.apk
+        path: ${{ steps.sign_app.outputs.signedReleaseFile }}
